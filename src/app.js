@@ -1,26 +1,27 @@
 const express = require("express");
 const app = express();
+const { adminAuth, userAuth } = require("/middlewares/auth");
 // app.use("/", (req, res) => {
 // 	res.send("Hello from the server...");
 // });
-app.use(
-	"/user", // Route path
+app.use("/admin", adminAuth);
 
-	[
-		(req, res, next) => {
-			// Route handler 1
-			console.log("Response 1");
-			next(); // middleware
-			// res.send("Response 1 ...");
-		},
-		(req, res, next) => {
-			// Route handler 2
-			console.log("Response 2");
-			res.send("Response 2 ...");
-			// next();
-		},
-	]
-);
+app.post("/user/login", (req, res) => {
+	res.send("Hello User, You are loggedIn...");
+});
+
+app.post("/user/data", userAuth, (req, res) => {
+	res.send("Hello User, You are Authorized...");
+});
+
+app.get("/admin/getAllData", (req, res) => {
+	res.send("All data sent");
+});
+
+app.get("/admin/deleteAllData", (req, res) => {
+	res.send("All data deleted");
+});
+
 app.listen(3030, () => {
 	console.log("Server is running on port 3030");
 });
