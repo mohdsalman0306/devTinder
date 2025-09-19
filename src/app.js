@@ -4,6 +4,25 @@ const { adminAuth, userAuth } = require("/middlewares/auth");
 // app.use("/", (req, res) => {
 // 	res.send("Hello from the server...");
 // });
+
+app.get("/getUserData", (req, res) => {
+	try {
+		//Logic of DB call and get user data
+		throw new Error("DB connection failed");
+		res.send("User data sent");
+	} catch (error) {
+		res.status(500).send("Some error occurred, contact support team");
+	}
+});
+
+app.use("/", (err, req, res, next) => {
+	if (err) {
+		// log your error
+		// res.status(500).send(err.message);
+		res.status(500).send("Something went wrong, please try again later");
+	}
+});
+
 app.use("/admin", adminAuth);
 
 app.post("/user/login", (req, res) => {
