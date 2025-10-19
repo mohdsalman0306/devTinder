@@ -7,3 +7,12 @@
 - Difference app.use and app.all
 - Write a dummy auth middlware for admin
 - Write a dummy auth middlware for all user, excepts /user/login
+
+- JS object vs JSON
+- Add a express.json() middleware to your app
+- Make a signup api dymanic to recieve data from the end use
+- User.findOne with duplicate email ids, which Obj return and why?
+- API - get user by email
+- API - Feed API - GET /feed - get all the users from the database
+- API - get user by ID - try using findById
+- Difference b/w patch and put API
