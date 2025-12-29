@@ -2,6 +2,9 @@ const express = require("express");
 const connectDB = require("./config/detabase");
 const User = require("./models/User");
 const validator = require("validator");
+const { validateSignUpData, validatePassword } = require("./utils/validation");
+const bcrypt = require("bcrypt");
+
 const app = express();
 
 app.use(express.json());
@@ -11,7 +14,7 @@ const validateAge = (age) => {
 	if (age === undefined || age === null) {
 		return null; // Age is optional
 	}
-	if (typeof age !== 'number' || isNaN(age)) {
+	if (typeof age !== "number" || isNaN(age)) {
 		return "Age must be a number";
 	}
 	// Convert to string for validator.isInt() which works with strings
@@ -22,39 +25,25 @@ const validateAge = (age) => {
 };
 
 const validatePhotoUrl = (photoUrl) => {
-	if (photoUrl === undefined || photoUrl === null || photoUrl.trim() === '') {
+	if (photoUrl === undefined || photoUrl === null || photoUrl.trim() === "") {
 		return null; // PhotoUrl is optional
 	}
-	if (typeof photoUrl !== 'string') {
+	if (typeof photoUrl !== "string") {
 		return "Photo URL must be a string";
 	}
-	if (!validator.isURL(photoUrl, { protocols: ['http', 'https'], require_protocol: true })) {
+	if (
+		!validator.isURL(photoUrl, {
+			protocols: ["http", "https"],
+			require_protocol: true,
+		})
+	) {
 		return "Photo URL must be a valid URL with http or https protocol";
 	}
 	return null;
 };
 
-const validatePassword = (password) => {
-	if (password === undefined || password === null) {
-		return "Password is required";
-	}
-	if (typeof password !== 'string') {
-		return "Password must be a string";
-	}
-	if (!validator.isStrongPassword(password, {
-		minLength: 8,
-		minLowercase: 1,
-		minUppercase: 1,
-		minNumbers: 1,
-		minSymbols: 0,
-	})) {
-		return "Password must be at least 8 characters long and contain at least one lowercase letter, one uppercase letter, and one number";
-	}
-	return null;
-};
-
 const validateSingleSkill = (skill) => {
-	if (typeof skill !== 'string') {
+	if (typeof skill !== "string") {
 		return "Each skill must be a string, not a number";
 	}
 	if (validator.isNumeric(skill)) {
@@ -80,17 +69,17 @@ const validateSkills = (skills) => {
 	if (skills.length > 10) {
 		return "Skills array cannot have more than 10 items";
 	}
-	
+
 	for (const skill of skills) {
 		const error = validateSingleSkill(skill);
 		if (error) return error;
 	}
-	
+
 	return null;
 };
 
 const handleMongooseError = (err, res) => {
-	if (err.name === 'ValidationError') {
+	if (err.name === "ValidationError") {
 		return res.status(400).send(err.message);
 	}
 	if (err.code === 11000) {
@@ -100,12 +89,10 @@ const handleMongooseError = (err, res) => {
 };
 
 app.post("/signup", async (req, res) => {
-	// Validate password
-	const passwordError = validatePassword(req.body.password);
-	if (passwordError) {
-		return res.status(400).send(passwordError);
+	const signUpData = validateSignUpData(req);
+	if (signUpData instanceof Error) {
+		return res.status(400).send(signUpData.message);
 	}
-
 	// Validate age
 	const ageError = validateAge(req.body.age);
 	if (ageError) {
@@ -123,8 +110,14 @@ app.post("/signup", async (req, res) => {
 	if (skillsError) {
 		return res.status(400).send(skillsError);
 	}
-
-	const user = new User(req.body);
+	const { firstName, lastName, emailId, password } = req.body;
+	const passwordHash = await bcrypt.hash(password, 10);
+	const user = new User({
+		firstName,
+		lastName,
+		emailId,
+		password: passwordHash,
+	});
 	try {
 		await user.save();
 		res.send(user);
@@ -132,7 +125,14 @@ app.post("/signup", async (req, res) => {
 		return handleMongooseError(err, res);
 	}
 });
-const ALLOWED_UPDATES = ['userId', 'photoUrl', 'about', 'skills', 'gender', 'age'];
+const ALLOWED_UPDATES = [
+	"userId",
+	"photoUrl",
+	"about",
+	"skills",
+	"gender",
+	"age",
+];
 // get user by email
 app.get("user", async (req, res) => {
 	const emailId = req.body.emailId;
@@ -167,13 +167,15 @@ app.get("/feed", async (req, res) => {
 app.patch("/user", async (req, res) => {
 	const userId = req.body.userId;
 	const data = req.body;
-	
+
 	// Validate allowed updates
-	const updates = Object.keys(data).every((update) => ALLOWED_UPDATES.includes(update));
+	const updates = Object.keys(data).every((update) =>
+		ALLOWED_UPDATES.includes(update)
+	);
 	if (!updates) {
 		return res.status(400).send("Invalid updates!");
 	}
-	
+
 	// Validate skills
 	const skillsError = validateSkills(req.body.skills);
 	if (skillsError) {
@@ -193,7 +195,10 @@ app.patch("/user", async (req, res) => {
 	}
 
 	try {
-		const user = await User.findByIdAndUpdate(userId, req.body, {returnDocument: "after", runValidators: true});
+		const user = await User.findByIdAndUpdate(userId, req.body, {
+			returnDocument: "after",
+			runValidators: true,
+		});
 		if (!user) {
 			return res.status(404).send("User not found");
 		}
