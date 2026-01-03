@@ -5,12 +5,20 @@ const validator = require("validator");
 const { validateSignUpData, validatePassword } = require("./utils/validation");
 const bcrypt = require("bcrypt");
 const cookieParser = require("cookie-parser");
+const { userAuth } = require("./middlewares/auth");
 
 const app = express();
-
 app.use(express.json());
 app.use(cookieParser());
 
+const ALLOWED_UPDATES = [
+	"userId",
+	"photoUrl",
+	"about",
+	"skills",
+	"gender",
+	"age",
+];
 // Validation helper functions
 const validateAge = (age) => {
 	if (age === undefined || age === null) {
@@ -132,38 +140,43 @@ app.post("/signup", async (req, res) => {
 app.post("/login", async (req, res) => {
 	try {
 		const { emailId, password } = req.body;
-		validator.isEmail(emailId) || res.status(400).send("Invalid email or password");
+		validator.isEmail(emailId) ||
+			res.status(400).send("Invalid email or password");
 		const user = await User.findOne({ emailId });
 		if (!user) {
 			return res.status(400).send("Invalid email or password");
 		}
-		const isPasswordValid = await bcrypt.compare(password, user.password);
+		const isPasswordValid = await user.validatePassword(password);
 		if (!isPasswordValid) {
 			return res.status(400).send("Invalid email or password");
 		}
-		const token = "cwe09ewchnc9webu32c89b9n2e3b2";
-		res.cookie("token", token);
+		const token = await user.getJWT();
+		res.cookie("token", token, {expires: new Date(Date.now() + 8 * 3600000) });
 		res.send(user);
 	} catch (err) {
 		return handleMongooseError(err, res);
 	}
-})
+});
 
-app.get('/profile', async (req, res) => {
-	const cookie = req.cookies;
-	console.log(cookie);
-	res.send("Checking Cookie Parser");
-})
+app.get("/profile", userAuth, async (req, res) => {
+	try {
+		const user = req.user;
+		res.send(user);
+	} catch (err) {
+		res.status(400).send("Error:" + err.message);
+	}
+});
 
+app.post("/sendConnectionRequest", userAuth, async (req, res) => {
+	try {
+		const user = req.user;
+		console.log("Sending the connection request...");
+		res.send(`${user.firstName} has sent the Connection request!!!`);
+	} catch (error) {
+		res.status(500).send("Error: " + error.message);
+	}
+});
 
-const ALLOWED_UPDATES = [
-	"userId",
-	"photoUrl",
-	"about",
-	"skills",
-	"gender",
-	"age",
-];
 // get user by email
 app.get("user", async (req, res) => {
 	const emailId = req.body.emailId;
