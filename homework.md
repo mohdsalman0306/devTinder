@@ -16,3 +16,4 @@
 - API - Feed API - GET /feed - get all the users from the database
 - API - get user by ID - try using findById
 - Difference b/w patch and put API
+
