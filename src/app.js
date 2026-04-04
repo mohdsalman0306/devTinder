@@ -1,6 +1,6 @@
 const express = require("express");
 const connectDB = require("./config/detabase");
-// 
+//
 const cookieParser = require("cookie-parser");
 
 const app = express();
