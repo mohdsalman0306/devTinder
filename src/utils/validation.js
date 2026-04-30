@@ -18,7 +18,7 @@ const validatePassword = (password) => {
 	}
 	if (!validator.isStrongPassword(password)) {
 		throw new Error(
-			"Password must be at least 8 characters long and contain at least one lowercase letter, one uppercase letter, one number, and one symbol"
+			"Password must be at least 8 characters long and contain at least one lowercase letter, one uppercase letter, one number, and one symbol",
 		);
 	}
 };
@@ -115,6 +115,23 @@ const handleMongooseError = (err, res) => {
 	return res.status(500).send(err.message);
 };
 
+const validateEditProfileData = (req) => {
+	const allowedEditFields = [
+		"firstName",
+		"lastName",
+		"age",
+		"emailId",
+		"photoUrl",
+		"gender",
+		"about",
+		"skills",
+	];
+	console.log(Object.keys(req.body));
+	const isEditAllowed = Object.keys(req.body).every((field) => allowedEditFields.includes(field));
+	console.log("isEditAllowed:", isEditAllowed);
+	return isEditAllowed;
+};
+
 module.exports = {
 	validateSignUpData,
 	validatePassword,
@@ -122,5 +139,6 @@ module.exports = {
 	validatePhotoUrl,
 	validateSingleSkill,
 	validateSkills,
-	handleMongooseError
+	handleMongooseError,
+	validateEditProfileData
 };
